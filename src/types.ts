@@ -19,6 +19,7 @@ export interface ProfileRecord {
   sl_bia_so: string;
   ghi_chu_bia_so: string;
   createdAt?: number;
+  createdBy?: string;
 }
 
 export interface UserProfile {

@@ -42,7 +42,7 @@ service cloud.firestore {
       // Yes! Because secondaryApp is a completely separate instance. When secondaryApp signs in, it runs as the NEW user!
       // So the NEW user will be trying to create their OWN record in the `users` collection.
       // So `request.auth.uid == userId` is actually true during creation via the secondary app!
-      allow create: if request.auth != null && request.auth.uid == userId && isValidId(userId);
+      allow create: if (request.auth != null && request.auth.uid == userId && isValidId(userId)) || isAdmin();
       allow update: if isAdmin() || (request.auth != null && request.auth.uid == userId && request.auth.token.email == 'adminl@bhxh.local');
       allow delete: if isAdmin();
     }

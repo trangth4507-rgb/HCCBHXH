@@ -14,6 +14,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthState
 import { auth, db } from './firebase';
 import { createNewUser } from './auth-utils';
 import { Users } from 'lucide-react';
+import { ExportToSheets } from './components/ExportToSheets';
 import { UserProfile } from './types';
 
 enum OperationType {
@@ -128,44 +129,54 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let profileUnsubscribe: (() => void) | undefined;
+
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = undefined;
+      }
+
       if (user) {
         setIsAuthenticated(true);
-        try {
-          const docRef = doc(db, 'users', user.uid);
-          const docSnap = await getDoc(docRef);
+        const docRef = doc(db, 'users', user.uid);
+        
+        profileUnsubscribe = onSnapshot(docRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
             if (user.email === 'adminl@bhxh.local' && data.role !== 'admin') {
               data.role = 'admin';
-              await setDoc(docRef, data);
+              try { await setDoc(docRef, data, { merge: true }); } catch (e) {}
             }
             setUserProfile(data);
           } else {
-            // First time logic if needed
             const newProfile: UserProfile = {
               uid: user.uid,
               email: user.email || '',
-              role: user.email === 'adminl@bhxh.local' ? 'admin' : 'user', // Default or admin if adminl
+              role: user.email === 'adminl@bhxh.local' ? 'admin' : 'user',
               createdAt: Date.now()
             };
-            await setDoc(docRef, newProfile);
+            try { await setDoc(docRef, newProfile); } catch (e) {}
             setUserProfile(newProfile);
           }
-        } catch (error) {
+          setIsAuthChecking(false);
+        }, (error) => {
           console.error("Error fetching user profile:", error);
-        }
+          setIsAuthChecking(false);
+        });
       } else {
         setIsAuthenticated(false);
         setUserProfile(null);
-        if (activeTab === 'users') {
-          setActiveTab('edit');
-        }
+        setActiveTab(prev => prev === 'users' ? 'edit' : prev);
+        setIsAuthChecking(false);
       }
-      setIsAuthChecking(false);
     });
-    return () => unsubscribe();
-  }, [activeTab]);
+
+    return () => {
+      authUnsubscribe();
+      if (profileUnsubscribe) profileUnsubscribe();
+    };
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -487,6 +498,7 @@ export default function App() {
             )}
           </div>
 
+          <ExportToSheets records={records} />
         </div>
       </div>
 
