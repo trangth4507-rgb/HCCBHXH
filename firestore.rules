@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isValidProfileRecord(data) {
+      return data.keys().hasAll(['id', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        (data.get('ma_ho_so', '') is string) &&
+        (data.get('ten_don_vi', '') is string) &&
+        (data.get('dia_chi', '') is string) &&
+        (data.get('sdt', '') is string) &&
+        (data.get('sl_to_roi', '') is string) &&
+        (data.get('ghi_chu_to_roi', '') is string) &&
+        (data.get('sl_bhyt', '') is string) &&
+        (data.get('ghi_chu_bhyt', '') is string) &&
+        (data.get('qd_hoan_tra', '') is string) &&
+        (data.get('qd_thu_hoi', '') is string) &&
+        (data.get('qd_huu_tri', '') is string) &&
+        (data.get('sl_bia_so', '') is string) &&
+        (data.get('ghi_chu_bia_so', '') is string) &&
+        data.createdAt is number;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // For bootstrapping the first admin or regular operations
+      // We allow create if the user is creating their own record (which our client-side bootstrap does),
+      // OR if admin is creating someone else's. Wait, the secondary app creates the user while NOT logged in as admin?
+      // Yes! Because secondaryApp is a completely separate instance. When secondaryApp signs in, it runs as the NEW user!
+      // So the NEW user will be trying to create their OWN record in the `users` collection.
+      // So `request.auth.uid == userId` is actually true during creation via the secondary app!
+      allow create: if request.auth != null && request.auth.uid == userId && isValidId(userId);
+      allow update: if isAdmin() || (request.auth != null && request.auth.uid == userId && request.auth.token.email == 'adminl@bhxh.local');
+      allow delete: if isAdmin();
+    }
+
+    match /records/{recordId} {
+      // Public read as per previous spec
+      allow read: if true;
+      // Any logged-in user can add records
+      allow create: if request.auth != null && isValidId(recordId) && isValidProfileRecord(incoming());
+      // Only admins or whoever can update/delete
+      allow update: if request.auth != null && isValidId(recordId) && isValidProfileRecord(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['id', 'ma_ho_so', 'ten_don_vi', 'dia_chi', 'sdt', 'sl_to_roi', 'ghi_chu_to_roi', 'sl_bhyt', 'ghi_chu_bhyt', 'qd_hoan_tra', 'qd_thu_hoi', 'qd_huu_tri', 'sl_bia_so', 'ghi_chu_bia_so', 'createdAt']);
+      allow delete: if isAdmin(); // Only admins can delete
+    }
+  }
+}

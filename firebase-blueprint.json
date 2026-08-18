@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "ProfileRecord": {
+      "title": "Profile Record",
+      "description": "A record of an administrative profile submission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ma_ho_so": { "type": "string" },
+        "ten_don_vi": { "type": "string" },
+        "dia_chi": { "type": "string" },
+        "sdt": { "type": "string" },
+        "sl_to_roi": { "type": "string" },
+        "ghi_chu_to_roi": { "type": "string" },
+        "sl_bhyt": { "type": "string" },
+        "ghi_chu_bhyt": { "type": "string" },
+        "qd_hoan_tra": { "type": "string" },
+        "qd_thu_hoi": { "type": "string" },
+        "qd_huu_tri": { "type": "string" },
+        "sl_bia_so": { "type": "string" },
+        "ghi_chu_bia_so": { "type": "string" },
+        "createdAt": { "type": "number", "description": "Timestamp" }
+      },
+      "required": ["id"]
+    }
+  },
+  "firestore": {
+    "records/{recordId}": {
+      "schema": { "$ref": "#/entities/ProfileRecord" },
+      "description": "Records collection"
+    }
+  }
+}

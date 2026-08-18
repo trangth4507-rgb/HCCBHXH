@@ -1,0 +1,6 @@
+{
+  "name": "Quản lý & In Hồ Sơ BHXH",
+  "description": "Ứng dụng quản lý, lưu Google Sheet và in Giấy giao nhận hồ sơ BHXH hàng loạt.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
